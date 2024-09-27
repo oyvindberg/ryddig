@@ -1,0 +1,47 @@
+$schema: https://raw.githubusercontent.com/oyvindberg/bleep/master/schema.json
+$version: 0.0.8
+jvm:
+  name: graalvm-community:21.0.2
+projects:
+  ryddig:
+    extends: template-cross-all
+    dependencies:
+      - com.lihaoyi::fansi:0.5.0
+      - io.circe::circe-core:0.14.10
+      - io.circe::circe-generic:0.14.10
+      - io.circe::circe-parser:0.14.10
+    platform:
+      mainClass: com.foo.App
+  tests:
+    dependencies: org.scalatest::scalatest:3.2.13
+    dependsOn: ryddig
+    extends: template-cross-all
+    isTestProject: true
+templates:
+  template-common:
+    platform:
+      name: jvm
+    scala:
+      options: -encoding utf8 -feature -unchecked
+      strict: true
+  template-cross-all:
+    cross:
+      jvm212:
+        extends: template-scala-2.12
+      jvm213:
+        extends: template-scala-2.13
+      jvm3:
+        extends: template-scala-3
+    extends: template-common
+  template-scala-2.12:
+    scala:
+      options: -Xsource:3
+      version: 2.12.20
+  template-scala-2.13:
+    scala:
+      options: -Xsource:3
+      version: 2.13.15
+  template-scala-3:
+    scala:
+      options: -source:3.5
+      version: 3.5.1
