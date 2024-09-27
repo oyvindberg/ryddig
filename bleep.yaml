@@ -18,11 +18,11 @@ projects:
     dependencies: org.typelevel::cats-effect:3.5.4
     dependsOn: ryddig
     extends: template-cross-all
-  tests:
-    dependencies: org.scalatest::scalatest:3.2.13
-    dependsOn: ryddig
-    extends: template-cross-all
-    isTestProject: true
+  scripts:
+    dependencies: build.bleep::bleep-plugin-ci-release:${BLEEP_VERSION}
+    extends:
+      - template-common
+      - template-scala-3
 templates:
   template-common:
     platform:
@@ -51,3 +51,10 @@ templates:
     scala:
       options: -source:3.5
       version: 3.5.1
+scripts:
+  publish:
+    main: ryddig.Publish
+    project: scripts
+  my-publish-local:
+    main: ryddig.PublishLocal
+    project: scripts
