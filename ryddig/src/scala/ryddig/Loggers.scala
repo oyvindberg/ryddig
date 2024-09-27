@@ -34,9 +34,13 @@ object Loggers {
   def storing(ctx: Ctx = emptyContext): TypedLogger[Array[TypedLogger.Stored]] =
     new TypedLogger.StoringLogger(new TypedLogger.Store, ctx, Nil)
 
-  def printJsonStream[U <: Flushable & Appendable](to: U, ctx: Ctx = emptyContext): TypedLogger[U] =
-    new jsonEvents.SerializeLogEvents[U](to, ctx, Nil)
+  def printJsonStream[U <: Flushable & Appendable](prefix: String, to: U, ctx: Ctx = emptyContext): TypedLogger[U] = {
+    val configured = new jsonEvents(prefix)
+    new configured.SerializeLogEvents[U](to, ctx, Nil)
+  }
 
-  def decodeJsonStream[U](next: TypedLogger[U]): TypedLogger[U] =
-    jsonEvents.DeserializeLogEvents(next)
+  def decodeJsonStream[U](prefix: String, next: TypedLogger[U]): TypedLogger[U] = {
+    val configured = new jsonEvents(prefix)
+    new configured.DeserializeLogEvents(next)
+  }
 }

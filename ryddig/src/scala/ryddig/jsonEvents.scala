@@ -10,11 +10,10 @@ import java.io.{PrintStream, PrintWriter}
 import java.time.Instant
 import scala.util.control.NoStackTrace
 
-private object jsonEvents {
-  // all log events will start with this string following 0.0.1-M26.
-  // Until then we need to keep supporting the old scheme where the json event is just directly to the stream.
-  val BLEEP_JSON_EVENT = "BLEEP_JSON_EVENT:"
-
+/**
+ * @param prefix all log events will start with this string. crucial for the deserializer to know when to deserialize
+ */
+class jsonEvents(prefix: String) {
   /** Meant for transferring log events between processes */
   case class JsonEvent(formatted: Str, throwable: Option[Th], metadata: Metadata, ctx: Ctx, path: List[String])
 
@@ -47,7 +46,7 @@ private object jsonEvents {
         // old scheme
         jsonEvent.formatted.plainText.startsWith("{") ||
         // new scheme
-        jsonEvent.formatted.plainText.startsWith(BLEEP_JSON_EVENT)
+        jsonEvent.formatted.plainText.startsWith(prefix)
       ) underlying.append(jsonEvent.formatted.plainText + "\n")
       else underlying.append(jsonEvent.asJson.noSpaces + "\n")
       ()
@@ -64,7 +63,7 @@ private object jsonEvents {
       LogLevel.debug
   }
 
-  final case class DeserializeLogEvents[U](next: TypedLogger[U]) extends TypedLogger[U] {
+  final class DeserializeLogEvents[U](next: TypedLogger[U]) extends TypedLogger[U] {
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       def doLog(plainText: String): Unit =
         decode[JsonEvent](plainText) match {
@@ -85,17 +84,17 @@ private object jsonEvents {
       // old scheme
       if (str.plainText.startsWith("{")) doLog(str.plainText)
       // new scheme
-      else if (str.plainText.startsWith(BLEEP_JSON_EVENT)) doLog(str.plainText.drop(BLEEP_JSON_EVENT.length))
+      else if (str.plainText.startsWith(prefix)) doLog(str.plainText.drop(prefix.length))
       else next.log(t, throwable, metadata)
     }
 
     override def withContext[T: Formatter](key: String, value: T): DeserializeLogEvents[U] =
-      DeserializeLogEvents(next.withContext(key, value))
+      new DeserializeLogEvents(next.withContext(key, value))
 
     override def progressMonitor: Option[LoggerFn] = next.progressMonitor
 
     override def withPath(fragment: String): DeserializeLogEvents[U] =
-      DeserializeLogEvents(next.withPath(fragment))
+      new DeserializeLogEvents(next.withPath(fragment))
 
     override def underlying: U = next.underlying
     override val minLogLevel: LogLevel = next.minLogLevel
