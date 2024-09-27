@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import fansi.Str
 
@@ -21,8 +21,9 @@ object Formatter {
     Str.join(List(Formatter(t1), Formatter(t2), Formatter(t3), ", "))
   }
 
-  implicit def Tuple4Formatter[T1: Formatter, T2: Formatter, T3: Formatter, T4: Formatter]: Formatter[(T1, T2, T3, T4)] = { case (t1, t2, t3, t4) =>
-    Str.join(List(Formatter(t1), Formatter(t2), Formatter(t3), Formatter(t4)), ", ")
+  implicit def Tuple4Formatter[T1: Formatter, T2: Formatter, T3: Formatter, T4: Formatter]: Formatter[(T1, T2, T3, T4)] = {
+    case (t1, t2, t3, t4) =>
+      Str.join(List(Formatter(t1), Formatter(t2), Formatter(t3), Formatter(t4)), ", ")
   }
 
   implicit def EitherFormatter[L: Formatter, R: Formatter]: Formatter[Either[L, R]] =

@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import java.io.Flushable
 

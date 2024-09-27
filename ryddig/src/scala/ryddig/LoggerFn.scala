@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import sourcecode.{Enclosing, File, Line}
 
@@ -12,7 +12,8 @@ trait LoggerFn { self =>
 
 object LoggerFn {
   implicit final class Syntax(private val fn: LoggerFn) extends AnyVal {
-    @inline def apply[T: Formatter](logLevel: LogLevel, t: => T, throwable: Option[Throwable] = None, instant: Instant = Instant.now)(implicit
+    @inline def apply[T: Formatter](logLevel: LogLevel, t: => T, throwable: Option[Throwable] = None, instant: Instant = Instant.now)(
+        implicit
         l: Line,
         f: File,
         e: Enclosing

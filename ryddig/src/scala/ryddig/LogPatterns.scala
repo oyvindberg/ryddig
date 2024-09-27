@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import fansi.{Color, EscapeAttr, Str}
 import sourcecode.Text

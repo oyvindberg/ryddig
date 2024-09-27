@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import sourcecode.{Enclosing, File, Line}
 

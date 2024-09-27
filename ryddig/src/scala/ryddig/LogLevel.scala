@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 sealed abstract class LogLevel(val level: Int)(implicit val name: sourcecode.Name) {
   val bracketName = s"[${name.value.padTo(5, ' ')}]"

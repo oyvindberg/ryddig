@@ -1,10 +1,10 @@
-package bleep.logging
+package ryddig
 
 import java.io.{BufferedWriter, Flushable, PrintStream, Writer}
 import java.nio.file.{Files, Path, StandardOpenOption}
 
 object Loggers {
-  private[logging] val emptyContext: Ctx = Map.empty
+  private[ryddig] val emptyContext: Ctx = Map.empty
 
   // this is a resource since we absolutely should flush it before we exit
   def stdout(pattern: Pattern, disableProgress: Boolean, ctx: Ctx = emptyContext): TypedLoggerResource[PrintStream] =

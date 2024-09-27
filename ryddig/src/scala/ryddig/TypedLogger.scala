@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import fansi.Str
 
@@ -26,7 +26,7 @@ object TypedLogger {
 
   case class Stored(message: Str, throwable: Option[Throwable], metadata: Metadata, ctx: Ctx, path: List[String])
 
-  private[logging] class Store() {
+  private[ryddig] class Store() {
     private var reversed: List[Stored] = Nil
 
     def store(s: Stored): Unit =
@@ -36,7 +36,7 @@ object TypedLogger {
       reversed.toArray.reverse
   }
 
-  private[logging] final class StoringLogger(store: Store, val ctx: Ctx, path: List[String]) extends TypedLogger[Array[Stored]] {
+  private[ryddig] final class StoringLogger(store: Store, val ctx: Ctx, path: List[String]) extends TypedLogger[Array[Stored]] {
 
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
       store.store(Stored(Formatter(t), throwable, metadata, ctx, path))
@@ -57,8 +57,13 @@ object TypedLogger {
       LogLevel.debug
   }
 
-  private[logging] final class WriterLogger[U <: Writer](val underlying: U, flush: Boolean, pattern: Pattern, val context: Ctx, val path: List[String])
-      extends TypedLogger[U] { self =>
+  private[ryddig] final class WriterLogger[U <: Writer](
+      val underlying: U,
+      flush: Boolean,
+      pattern: Pattern,
+      val context: Ctx,
+      val path: List[String]
+  ) extends TypedLogger[U] { self =>
 
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       val formatted = pattern(t, throwable, metadata, context, path)
@@ -80,7 +85,7 @@ object TypedLogger {
     override val minLogLevel: LogLevel = LogLevel.debug
   }
 
-  private[logging] final class ConsoleLogger[U <: PrintStream](
+  private[ryddig] final class ConsoleLogger[U <: PrintStream](
       val underlying: U,
       pattern: Pattern,
       val context: Ctx,
@@ -132,7 +137,7 @@ object TypedLogger {
       LogLevel.debug
   }
 
-  private[logging] final class Zipped[U1, U2](one: TypedLogger[U1], two: TypedLogger[U2]) extends TypedLogger[(U1, U2)] {
+  private[ryddig] final class Zipped[U1, U2](one: TypedLogger[U1], two: TypedLogger[U2]) extends TypedLogger[(U1, U2)] {
     override def underlying: (U1, U2) =
       (one.underlying, two.underlying)
 
@@ -154,7 +159,8 @@ object TypedLogger {
       one.minLogLevel.min(two.minLogLevel)
   }
 
-  private[logging] final class MaybeZipped[U1, U2](one: TypedLogger[U1], two: Option[TypedLogger[U2]]) extends TypedLogger[(U1, Option[U2])] {
+  private[ryddig] final class MaybeZipped[U1, U2](one: TypedLogger[U1], two: Option[TypedLogger[U2]])
+      extends TypedLogger[(U1, Option[U2])] {
     override def underlying: (U1, Option[U2]) =
       (one.underlying, two.map(_.underlying))
 
@@ -190,7 +196,7 @@ object TypedLogger {
       }
   }
 
-  private[logging] final class MinLogLevel[U](wrapped: TypedLogger[U], val minLogLevel: LogLevel) extends TypedLogger[U] {
+  private[ryddig] final class MinLogLevel[U](wrapped: TypedLogger[U], val minLogLevel: LogLevel) extends TypedLogger[U] {
     override def underlying: U = wrapped.underlying
 
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
@@ -208,7 +214,7 @@ object TypedLogger {
       wrapped.progressMonitor
   }
 
-  private[logging] final class Mapped[U, UU](wrapped: TypedLogger[U], f: U => UU) extends TypedLogger[UU] {
+  private[ryddig] final class Mapped[U, UU](wrapped: TypedLogger[U], f: U => UU) extends TypedLogger[UU] {
     override def underlying: UU = f(wrapped.underlying)
 
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
@@ -227,7 +233,7 @@ object TypedLogger {
       wrapped.minLogLevel
   }
 
-  private[logging] final class Synchronized[U](wrapped: TypedLogger[U]) extends TypedLogger[U] {
+  private[ryddig] final class Synchronized[U](wrapped: TypedLogger[U]) extends TypedLogger[U] {
     override def underlying: U = wrapped.underlying
 
     override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =

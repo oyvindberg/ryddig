@@ -4,14 +4,16 @@ jvm:
   name: graalvm-community:21.0.2
 projects:
   ryddig:
-    extends: template-cross-all
     dependencies:
-      - com.lihaoyi::fansi:0.5.0
-      - io.circe::circe-core:0.14.10
-      - io.circe::circe-generic:0.14.10
-      - io.circe::circe-parser:0.14.10
-    platform:
-      mainClass: com.foo.App
+    - com.lihaoyi::fansi:0.5.0
+    - io.circe::circe-core:0.14.10
+    - io.circe::circe-generic:0.14.10
+    - io.circe::circe-parser:0.14.10
+    extends: template-cross-all
+  ryddig-slf4j2:
+    dependencies: org.slf4j:slf4j-api:2.0.16
+    dependsOn: ryddig
+    extends: template-cross-all
   tests:
     dependencies: org.scalatest::scalatest:3.2.13
     dependsOn: ryddig

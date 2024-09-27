@@ -1,4 +1,4 @@
-package bleep.logging
+package ryddig
 
 import fansi.Str
 import io.circe.generic.semiauto
@@ -109,7 +109,8 @@ private object jsonEvents {
 
   /** Wrap exceptions in something which is easier to transfer
     */
-  case class Th(className: String, message: Option[String], cause: Option[Th], stackTrace: String, suppressed: Array[Th]) extends Throwable()
+  case class Th(className: String, message: Option[String], cause: Option[Th], stackTrace: String, suppressed: Array[Th])
+      extends Throwable()
 
   object Th {
     implicit val encoder: Encoder[Th] = semiauto.deriveEncoder
