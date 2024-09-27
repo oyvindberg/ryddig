@@ -14,6 +14,10 @@ projects:
     dependencies: org.slf4j:slf4j-api:2.0.16
     dependsOn: ryddig
     extends: template-cross-all
+  ryddig-ce3:
+    dependencies: org.typelevel::cats-effect:3.5.4
+    dependsOn: ryddig
+    extends: template-cross-all
   tests:
     dependencies: org.scalatest::scalatest:3.2.13
     dependsOn: ryddig
