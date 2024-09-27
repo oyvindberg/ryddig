@@ -7,13 +7,14 @@ import java.time.Instant
 
 object ce3 {
   implicit class ResourceOps[A](private val res: TypedLoggerResource[A]) extends AnyVal {
-    def asResource[F[_]: Sync]: Resource[F, EffectfulLogger[F, A]] =
+    def asResource[F[_]: Sync]: Resource[F, TypedEffectfulLogger[F, A]] =
       Resource
         .make(Sync[F].delay(res.acquire())) { case (_, release) => Sync[F].delay(release()) }
-        .map { case (logger, _) => new EffectfulLogger(logger) }
+        .map { case (logger, _) => new TypedEffectfulLogger(logger) }
   }
+  type EffectfulLogger[F[_]] = TypedEffectfulLogger[F, Unit]
 
-  class EffectfulLogger[F[_]: Sync, A](val underlying: TypedLogger[A]) {
+  class TypedEffectfulLogger[F[_]: Sync, A](val underlying: TypedLogger[A]) {
     def apply[T: Formatter](
         logLevel: LogLevel,
         t: => T,
@@ -46,7 +47,16 @@ object ce3 {
     @inline def error[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): F[Unit] =
       apply(LogLevel.error, t, Some(th))(using implicitly, l, f, e)
 
-    def and[B](other: EffectfulLogger[F, B]): EffectfulLogger[F, (A, B)] =
-      new EffectfulLogger(underlying.zipWith(other.underlying))
+    def and[B](other: TypedEffectfulLogger[F, B]): TypedEffectfulLogger[F, (A, B)] =
+      new TypedEffectfulLogger(underlying.zipWith(other.underlying))
+
+    def untyped: EffectfulLogger[F] =
+      new TypedEffectfulLogger(underlying.untyped)
+
+    def minLogLevel(minLogLevel: LogLevel): TypedEffectfulLogger[F, A] =
+      new TypedEffectfulLogger(underlying.minLogLevel(minLogLevel))
+
+    def syncAccess: TypedEffectfulLogger[F, A] =
+      new TypedEffectfulLogger(underlying.syncAccess)
   }
 }
