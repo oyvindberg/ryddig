@@ -7,11 +7,14 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 trait TypedLogger[Underlying] extends LoggerFn {
   val minLogLevel: LogLevel
+  
   def underlying: Underlying
 
   def withContext[T: Formatter](key: String, value: T): TypedLogger[Underlying]
 
   def withPath(fragment: String): TypedLogger[Underlying]
+
+  def progressMonitor: Option[LoggerFn]
 
   final def withOptContext[T: Formatter](key: String, maybeValue: Option[T]): TypedLogger[Underlying] =
     maybeValue match {
@@ -19,7 +22,20 @@ trait TypedLogger[Underlying] extends LoggerFn {
       case None        => this
     }
 
-  def progressMonitor: Option[LoggerFn]
+  final def zipWith[UU](other: TypedLogger[UU]): TypedLogger[(Underlying, UU)] =
+    new TypedLogger.Zipped(this, other)
+
+  final def maybeZipWith[UU](other: Option[TypedLogger[UU]]): TypedLogger[(Underlying, Option[UU])] =
+    new TypedLogger.MaybeZipped(this, other)
+
+  final def withMinLogLevel(minLogLevel: LogLevel): TypedLogger[Underlying] =
+    new TypedLogger.MinLogLevel(this, minLogLevel)
+
+  final def untyped: TypedLogger[Unit] =
+    new TypedLogger.Mapped[Underlying, Unit](this, _ => ())
+
+  final def syncAccess: TypedLogger[Underlying] =
+    new TypedLogger.Synchronized(this)
 }
 
 object TypedLogger {
@@ -259,22 +275,5 @@ object TypedLogger {
     override def log[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = ()
     override def progressMonitor: Option[LoggerFn] = None
     override val minLogLevel: LogLevel = LogLevel.error
-  }
-
-  implicit final class LoggerAuxSyntax[U](private val self: TypedLogger[U]) extends AnyVal {
-    def zipWith[UU](other: TypedLogger[UU]): TypedLogger[(U, UU)] =
-      new Zipped(self, other)
-
-    def maybeZipWith[UU](other: Option[TypedLogger[UU]]): TypedLogger[(U, Option[UU])] =
-      new MaybeZipped(self, other)
-
-    def minLogLevel(minLogLevel: LogLevel): TypedLogger[U] =
-      new MinLogLevel(self, minLogLevel)
-
-    def untyped: TypedLogger[Unit] =
-      new Mapped[U, Unit](self, _ => ())
-
-    def syncAccess: TypedLogger[U] =
-      new Synchronized(self)
   }
 }

@@ -54,7 +54,7 @@ object ce3 {
       new TypedEffectfulLogger(underlying.untyped)
 
     def minLogLevel(minLogLevel: LogLevel): TypedEffectfulLogger[F, A] =
-      new TypedEffectfulLogger(underlying.minLogLevel(minLogLevel))
+      new TypedEffectfulLogger(underlying.withMinLogLevel(minLogLevel))
 
     def syncAccess: TypedEffectfulLogger[F, A] =
       new TypedEffectfulLogger(underlying.syncAccess)
