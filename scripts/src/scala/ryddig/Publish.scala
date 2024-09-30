@@ -1,6 +1,6 @@
-package bleep
-package scripts
+package ryddig
 
+import bleep.*
 import bleep.nosbt.InteractionService
 import bleep.packaging.{CoordinatesFor, PackagedLibrary, PublishLayout, packageLibraries}
 import bleep.plugin.cirelease.CiReleasePlugin
