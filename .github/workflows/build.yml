@@ -1,0 +1,55 @@
+name: Build
+on:
+  push:
+    tags: [ 'v*' ]
+    branches: [ 'master' ]
+  pull_request:
+    branches: [ 'master' ]
+
+jobs:
+  build:
+    timeout-minutes: 15
+    # need to be newer than `ubuntu-20.04` because of scalafmt native binary
+    runs-on: ubuntu-latest
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: bleep-build/bleep-setup-action@0.0.2
+      - uses: coursier/cache-action@v6
+        with:
+          extraFiles: bleep.yaml
+
+      - name: Scalafmt Check
+        run: bleep fmt --check
+
+      - name: Run tests
+        env:
+          CI: true
+        run: |
+          bleep compile
+
+  release:
+    timeout-minutes: 15
+    runs-on: ubuntu-20.04
+    needs: [ build ]
+    if: "startsWith(github.ref, 'refs/tags/v')"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - name: Release
+        run: |
+          bleep publish
+        env:
+          PGP_PASSPHRASE: ${{ secrets.PGP_PASSPHRASE }}
+          PGP_SECRET: ${{ secrets.PGP_SECRET }}
+          SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+          SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      - name: Upload-to-release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ steps.get_version.outputs.version-without-v }}"
+          prerelease: false
+          generate_release_notes: true
