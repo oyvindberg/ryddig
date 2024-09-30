@@ -29,7 +29,6 @@ object Publish extends BleepScript("Publish") {
       sonatypeProfileName = groupId,
       bundleName = "ryddig",
       version = dynVer.version,
-      sonatypeCredentialHost = Sonatype.sonatype01
     )
     val ciRelease = new CiReleasePlugin(started.logger, sonatype, dynVer, pgp)
 
