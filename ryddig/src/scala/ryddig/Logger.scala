@@ -201,7 +201,7 @@ object TypedLogger {
     override def underlying: (U1, U2) =
       (one.underlying, two.underlying)
 
-    private val both = one.and(two)
+    private val both = one.zipWith(two)
 
     override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
       both.apply(t, throwable, metadata)
@@ -226,7 +226,7 @@ object TypedLogger {
 
     private val both =
       two match {
-        case Some(two) => one.and(two)
+        case Some(two) => one.zipWith(two)
         case None      => one
       }
 
