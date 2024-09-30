@@ -49,6 +49,8 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      - id: get_version
+        uses: battila7/get-version-action@v2
       - name: Upload-to-release
         uses: softprops/action-gh-release@v2
         with:
