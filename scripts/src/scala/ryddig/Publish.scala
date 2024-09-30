@@ -12,8 +12,6 @@ import coursier.Info
 import scala.collection.immutable.SortedMap
 
 object Publish extends BleepScript("Publish") {
-  val groupId = "com.olvind.ryddig"
-
   def run(started: Started, commands: Commands, args: List[String]): Unit = {
     commands.compile(started.build.explodedProjects.keys.toList)
 
@@ -26,9 +24,9 @@ object Publish extends BleepScript("Publish") {
     val sonatype = new Sonatype(
       logger = started.logger,
       sonatypeBundleDirectory = started.buildPaths.dotBleepDir / "sonatype-bundle",
-      sonatypeProfileName = groupId,
+      sonatypeProfileName = "com.olvind",
       bundleName = "ryddig",
-      version = dynVer.version,
+      version = dynVer.version
     )
     val ciRelease = new CiReleasePlugin(started.logger, sonatype, dynVer, pgp)
 
@@ -59,7 +57,7 @@ object Publish extends BleepScript("Publish") {
     val packagedLibraries: SortedMap[model.CrossProjectName, PackagedLibrary] =
       packageLibraries(
         started,
-        coordinatesFor = CoordinatesFor.Default(groupId = groupId, version = dynVer.version),
+        coordinatesFor = CoordinatesFor.Default(groupId = "com.olvind.ryddig", version = dynVer.version),
         shouldInclude = _ => true,
         publishLayout = PublishLayout.Maven(info)
       )
