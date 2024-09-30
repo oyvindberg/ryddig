@@ -5,15 +5,61 @@ import fansi.Str
 import java.io.{PrintStream, Writer}
 import java.util.concurrent.atomic.AtomicBoolean
 
-trait TypedLogger[Underlying] extends LoggerFn {
+/** We do some acrobatics to make sure that this supertype of `TypedLogger` can expose all the same operations in an untyped form.
+  */
+sealed trait Logger extends LoggerFn with LogActions {
   val minLogLevel: LogLevel
-  
+}
+
+object Logger {
+  implicit class LoggerOps(l: Logger) {
+    def withContext[T: Formatter](key: String, value: T): Logger =
+      l match {
+        case l: TypedLogger[t] => l.withContext(key, value)
+      }
+
+    def withOptContext[T: Formatter](key: String, maybeValue: Option[T]): Logger =
+      maybeValue match {
+        case Some(value) => withContext(key, value)
+        case None        => l
+      }
+
+    def withPath(fragment: String): Logger =
+      l match {
+        case l: TypedLogger[t] => l.withPath(fragment)
+      }
+
+    def withMinLogLevel(minLogLevel: LogLevel): Logger =
+      l match {
+        case l: TypedLogger[t] => l.withMinLogLevel(minLogLevel)
+      }
+
+    def zipWith(other: Logger): Logger =
+      (l, other) match {
+        case (l1: TypedLogger[t1], l2: TypedLogger[t2]) => l1.zipWith(l2)
+      }
+
+    def maybeZipWith(other: Option[Logger]): Logger =
+      (l, other) match {
+        case (l1: TypedLogger[t1], Some(l2: TypedLogger[t2])) => l1.maybeZipWith(Some(l2))
+        case (l1: TypedLogger[t1], None)                      => l1.maybeZipWith(None)
+      }
+
+    def syncAccess: Logger =
+      l match {
+        case l: TypedLogger[t] => l.synchronized
+      }
+  }
+}
+
+trait TypedLogger[+Underlying] extends Logger {
   def underlying: Underlying
 
   def withContext[T: Formatter](key: String, value: T): TypedLogger[Underlying]
 
   def withPath(fragment: String): TypedLogger[Underlying]
 
+  @deprecated("this is only here until bleep has a proper thing to render UI like tui.", "0.1.0")
   def progressMonitor: Option[LoggerFn]
 
   final def withOptContext[T: Formatter](key: String, maybeValue: Option[T]): TypedLogger[Underlying] =
@@ -22,24 +68,23 @@ trait TypedLogger[Underlying] extends LoggerFn {
       case None        => this
     }
 
-  final def zipWith[UU](other: TypedLogger[UU]): TypedLogger[(Underlying, UU)] =
+  final def zipWith[U2](other: TypedLogger[U2]): TypedLogger[(Underlying, U2)] =
     new TypedLogger.Zipped(this, other)
 
-  final def maybeZipWith[UU](other: Option[TypedLogger[UU]]): TypedLogger[(Underlying, Option[UU])] =
+  final def maybeZipWith[U2](other: Option[TypedLogger[U2]]): TypedLogger[(Underlying, Option[U2])] =
     new TypedLogger.MaybeZipped(this, other)
 
-  final def withMinLogLevel(minLogLevel: LogLevel): TypedLogger[Underlying] =
-    new TypedLogger.MinLogLevel(this, minLogLevel)
+  final def withMinLogLevel(level: LogLevel): TypedLogger[Underlying] =
+    new TypedLogger.MinLogLevel(this, level)
 
-  final def untyped: TypedLogger[Unit] =
-    new TypedLogger.Mapped[Underlying, Unit](this, _ => ())
+  final def map[U2](f: Underlying => U2): TypedLogger[U2] =
+    new TypedLogger.Mapped(this, f)
 
-  final def syncAccess: TypedLogger[Underlying] =
+  final def synchronized: TypedLogger[Underlying] =
     new TypedLogger.Synchronized(this)
 }
 
 object TypedLogger {
-
   case class Stored(message: Str, throwable: Option[Throwable], metadata: Metadata, ctx: Ctx, path: List[String])
 
   private[ryddig] class Store() {
@@ -54,7 +99,7 @@ object TypedLogger {
 
   private[ryddig] final class StoringLogger(store: Store, val ctx: Ctx, path: List[String]) extends TypedLogger[Array[Stored]] {
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
       store.store(Stored(Formatter(t), throwable, metadata, ctx, path))
 
     override def withContext[T: Formatter](key: String, value: T): StoringLogger =
@@ -81,7 +126,7 @@ object TypedLogger {
       val path: List[String]
   ) extends TypedLogger[U] { self =>
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       val formatted = pattern(t, throwable, metadata, context, path)
       underlying.append(formatted.render + "\n")
       if (flush) {
@@ -108,11 +153,11 @@ object TypedLogger {
       path: List[String],
       disableProgress: Boolean,
       lastWasProgress: AtomicBoolean = new AtomicBoolean(false) // need to share this across instances after `withContext`
-  ) extends TypedLogger[U] {
+  ) extends TypedLogger[U] { self =>
 
     val CleanCurrentLine = "\u001b[K"
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       val formatted = pattern(t, throwable, metadata, context, path)
       if (lastWasProgress.get()) {
         underlying.println(CleanCurrentLine + formatted.render)
@@ -130,13 +175,12 @@ object TypedLogger {
     override def withPath(fragment: String): ConsoleLogger[U] =
       new ConsoleLogger(underlying, pattern, context, fragment :: path, disableProgress, lastWasProgress)
 
-    // todo: this is only here until we have a proper thing to render UI like tui.
     override def progressMonitor: Option[LoggerFn] =
       if (disableProgress) None
       else
         Some {
           new LoggerFn {
-            override def log[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+            override def apply[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
               val formatted = pattern(text, throwable, metadata, context, path)
               if (lastWasProgress.get()) {
                 underlying.print(CleanCurrentLine + formatted.render + "\r")
@@ -159,8 +203,8 @@ object TypedLogger {
 
     private val both = one.and(two)
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
-      both.log(t, throwable, metadata)
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
+      both.apply(t, throwable, metadata)
 
     override def withContext[T: Formatter](key: String, value: T): Zipped[U1, U2] =
       new Zipped(one.withContext(key, value), two.withContext(key, value))
@@ -169,7 +213,7 @@ object TypedLogger {
       new Zipped(one.withPath(fragment), two.withPath(fragment))
 
     override def progressMonitor: Option[LoggerFn] =
-      List(one.progressMonitor, two.progressMonitor).flatten.reduceOption(_.and(_))
+      one.progressMonitor.orElse(two.progressMonitor)
 
     override val minLogLevel: LogLevel =
       one.minLogLevel.min(two.minLogLevel)
@@ -186,8 +230,8 @@ object TypedLogger {
         case None      => one
       }
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
-      both.log(t, throwable, metadata)
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
+      both.apply(t, throwable, metadata)
 
     override def withContext[T: Formatter](key: String, value: T): MaybeZipped[U1, U2] =
       new MaybeZipped(one.withContext(key, value), two.map(_.withContext(key, value)))
@@ -215,9 +259,9 @@ object TypedLogger {
   private[ryddig] final class MinLogLevel[U](wrapped: TypedLogger[U], val minLogLevel: LogLevel) extends TypedLogger[U] {
     override def underlying: U = wrapped.underlying
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
       if (m.logLevel.level >= minLogLevel.level) {
-        wrapped.log(t, throwable, m)
+        wrapped.apply(t, throwable, m)
       }
 
     override def withContext[T: Formatter](key: String, value: T): MinLogLevel[U] =
@@ -233,8 +277,8 @@ object TypedLogger {
   private[ryddig] final class Mapped[U, UU](wrapped: TypedLogger[U], f: U => UU) extends TypedLogger[UU] {
     override def underlying: UU = f(wrapped.underlying)
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
-      wrapped.log(t, throwable, m)
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
+      wrapped.apply(t, throwable, m)
 
     override def withContext[T: Formatter](key: String, value: T): Mapped[U, UU] =
       new Mapped(wrapped.withContext(key, value), f)
@@ -252,8 +296,8 @@ object TypedLogger {
   private[ryddig] final class Synchronized[U](wrapped: TypedLogger[U]) extends TypedLogger[U] {
     override def underlying: U = wrapped.underlying
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
-      this.synchronized(wrapped.log(t, throwable, m))
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
+      this.synchronized(wrapped.apply(t, throwable, m))
 
     override def withContext[T: Formatter](key: String, value: T): Synchronized[U] =
       new Synchronized(wrapped.withContext(key, value))
@@ -272,7 +316,7 @@ object TypedLogger {
     override def underlying: Unit = ()
     override def withContext[T: Formatter](key: String, value: T): DevNull.type = this
     override def withPath(fragment: String): DevNull.type = this
-    override def log[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = ()
+    override def apply[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = ()
     override def progressMonitor: Option[LoggerFn] = None
     override val minLogLevel: LogLevel = LogLevel.error
   }

@@ -3,57 +3,44 @@ package ryddig
 import sourcecode.{Enclosing, File, Line}
 
 import java.time.Instant
-import scala.sys.process.ProcessLogger
 
+/** Prefer using [[Logger]] to this, as it produces more more efficient code.
+  */
 @FunctionalInterface
-trait LoggerFn { self =>
-  def log[T: Formatter](value: => T, throwable: Option[Throwable], metadata: Metadata): Unit
+trait LoggerFn {
+  def apply[T: Formatter](value: => T, throwable: Option[Throwable], metadata: Metadata): Unit
+}
 
-  final def apply[T: Formatter](
-      logLevel: LogLevel,
-      t: => T,
-      throwable: Option[Throwable] = None,
-      instant: Instant = Instant.now
-  )(implicit l: Line, f: File, e: Enclosing): Unit =
-    this.log(t, throwable, new Metadata(instant, logLevel, l, f, e))
+object LoggerFn {
+  final implicit class LoggerFnOps(logger: LoggerFn) {
+    def log[T: Formatter](logLevel: LogLevel, t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, None, new Metadata(Instant.now, logLevel, l, f, e))
 
-  @inline final def debug[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.debug, t)
+    def log[T: Formatter](logLevel: LogLevel, t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, Some(th), new Metadata(Instant.now, logLevel, l, f, e))
 
-  @inline final def debug[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.debug, t, Some(th))
+    def debug[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, None, new Metadata(Instant.now, LogLevel.debug, l, f, e))
 
-  @inline final def info[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.info, t)
+    def debug[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, Some(th), new Metadata(Instant.now, LogLevel.debug, l, f, e))
 
-  @inline final def info[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.info, t, Some(th))
+    def info[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, None, new Metadata(Instant.now, LogLevel.info, l, f, e))
 
-  @inline final def warn[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.warn, t)
+    def info[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, Some(th), new Metadata(Instant.now, LogLevel.info, l, f, e))
 
-  @inline final def warn[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.warn, t, Some(th))
+    def warn[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, None, new Metadata(Instant.now, LogLevel.warn, l, f, e))
 
-  @inline final def error[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.error, t)
+    def warn[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, Some(th), new Metadata(Instant.now, LogLevel.warn, l, f, e))
 
-  @inline final def error[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
-    apply(LogLevel.error, t, Some(th))
+    def error[T: Formatter](t: => T)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, None, new Metadata(Instant.now, LogLevel.error, l, f, e))
 
-  final def and(other: LoggerFn): LoggerFn =
-    new LoggerFn {
-      override def log[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
-        this.log(text, throwable, metadata)
-        other.log(text, throwable, metadata)
-      }
-    }
-
-  final def processLogger(prefix: String)(implicit l: Line, f: File, e: Enclosing): ProcessLogger = {
-    val separatedPrefix = if (prefix.isEmpty) prefix else s"$prefix: "
-    ProcessLogger(
-      out => info(separatedPrefix + out)(using implicitly, l, f, e),
-      err => error(separatedPrefix + err)(using implicitly, l, f, e)
-    )
+    def error[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
+      logger(t, Some(th), new Metadata(Instant.now, LogLevel.error, l, f, e))
   }
 }

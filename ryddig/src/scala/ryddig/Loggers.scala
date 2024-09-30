@@ -7,8 +7,8 @@ object Loggers {
   private[ryddig] val emptyContext: Ctx = Map.empty
 
   // this is a resource since we absolutely should flush it before we exit
-  def stdout(pattern: Pattern, disableProgress: Boolean, ctx: Ctx = emptyContext): TypedLoggerResource[PrintStream] =
-    TypedLoggerResource.flushable {
+  def stdout(pattern: Pattern, disableProgress: Boolean, ctx: Ctx = emptyContext): LoggerResource[PrintStream] =
+    LoggerResource.flushable {
       new TypedLogger.ConsoleLogger(System.out, pattern, ctx, Nil, disableProgress)
     }
 
@@ -20,8 +20,8 @@ object Loggers {
     new TypedLogger.ConsoleLogger(System.err, pattern, ctx, Nil, disableProgress = true)
 
   // this is a resource since we absolutely should close/flush it before we exit
-  def path(logFile: Path, pattern: Pattern, ctx: Ctx = emptyContext): TypedLoggerResource[BufferedWriter] =
-    TypedLoggerResource.autoCloseable {
+  def path(logFile: Path, pattern: Pattern, ctx: Ctx = emptyContext): LoggerResource[BufferedWriter] =
+    LoggerResource.autoCloseable {
       Files.createDirectories(logFile.getParent)
       val w = Files.newBufferedWriter(logFile, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
       writer(w, flush = true, pattern, ctx)

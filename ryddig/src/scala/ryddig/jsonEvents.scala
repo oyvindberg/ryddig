@@ -10,10 +10,11 @@ import java.io.{PrintStream, PrintWriter}
 import java.time.Instant
 import scala.util.control.NoStackTrace
 
-/**
- * @param prefix all log events will start with this string. crucial for the deserializer to know when to deserialize
- */
+/** @param prefix
+  *   all log events will start with this string. crucial for the deserializer to know when to deserialize
+  */
 class jsonEvents(prefix: String) {
+
   /** Meant for transferring log events between processes */
   case class JsonEvent(formatted: Str, throwable: Option[Th], metadata: Metadata, ctx: Ctx, path: List[String])
 
@@ -40,7 +41,7 @@ class jsonEvents(prefix: String) {
   final class SerializeLogEvents[U <: Appendable](val underlying: U, val context: Ctx, val path: List[String]) extends TypedLogger[U] {
     import io.circe.syntax.*
 
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       val jsonEvent = JsonEvent.from(t, throwable, metadata, context, path)
       if (
         // old scheme
@@ -64,20 +65,19 @@ class jsonEvents(prefix: String) {
   }
 
   final class DeserializeLogEvents[U](next: TypedLogger[U]) extends TypedLogger[U] {
-    override def log[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
       def doLog(plainText: String): Unit =
         decode[JsonEvent](plainText) match {
-          case Left(_) => next.log(t, throwable, metadata)
+          case Left(_) => next.apply(t, throwable, metadata)
           case Right(jsonEvent) =>
             val logger1 = jsonEvent.path.foldRight(next) { case (fragment, acc) => acc.withPath(fragment) }
             val logger2 = jsonEvent.ctx.foldRight(logger1) { case ((k, v), acc) => acc.withContext(k, v) }
 
-            logger2(
-              jsonEvent.metadata.logLevel,
+            logger2.apply(
               jsonEvent.formatted,
               jsonEvent.throwable.map(DeserializedThrowable.apply),
-              jsonEvent.metadata.instant
-            )(using Formatter.StrFormatter, jsonEvent.metadata.line, jsonEvent.metadata.file, jsonEvent.metadata.enclosing)
+              jsonEvent.metadata
+            )(using Formatter.StrFormatter)
         }
 
       val str = implicitly[Formatter[T]].apply(t)
@@ -85,7 +85,7 @@ class jsonEvents(prefix: String) {
       if (str.plainText.startsWith("{")) doLog(str.plainText)
       // new scheme
       else if (str.plainText.startsWith(prefix)) doLog(str.plainText.drop(prefix.length))
-      else next.log(t, throwable, metadata)
+      else next.apply(t, throwable, metadata)
     }
 
     override def withContext[T: Formatter](key: String, value: T): DeserializeLogEvents[U] =
