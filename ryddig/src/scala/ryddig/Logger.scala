@@ -45,9 +45,9 @@ object Logger {
         case (l1: TypedLogger[t1], None)                      => l1.maybeZipWith(None)
       }
 
-    def syncAccess: Logger =
+    def synchronized(on: Object): Logger =
       l match {
-        case l: TypedLogger[t] => l.synchronized
+        case l: TypedLogger[t] => l.synchronized(on)
       }
   }
 }
@@ -80,8 +80,8 @@ trait TypedLogger[+Underlying] extends Logger {
   final def map[U2](f: Underlying => U2): TypedLogger[U2] =
     new TypedLogger.Mapped(this, f)
 
-  final def synchronized: TypedLogger[Underlying] =
-    new TypedLogger.Synchronized(this)
+  final def synchronized(on: Object): TypedLogger[Underlying] =
+    new TypedLogger.Synchronized(this, on)
 }
 
 object TypedLogger {
@@ -293,17 +293,17 @@ object TypedLogger {
       wrapped.minLogLevel
   }
 
-  private[ryddig] final class Synchronized[U](wrapped: TypedLogger[U]) extends TypedLogger[U] {
+  private[ryddig] final class Synchronized[U](wrapped: TypedLogger[U], on: Object) extends TypedLogger[U] {
     override def underlying: U = wrapped.underlying
 
     override def apply[T: Formatter](t: => T, throwable: Option[Throwable], m: Metadata): Unit =
-      this.synchronized(wrapped.apply(t, throwable, m))
+      on.synchronized(wrapped.apply(t, throwable, m))
 
     override def withContext[T: Formatter](key: String, value: T): Synchronized[U] =
-      new Synchronized(wrapped.withContext(key, value))
+      new Synchronized(wrapped.withContext(key, value), on)
 
     override def withPath(fragment: String): Synchronized[U] =
-      new Synchronized(wrapped.withPath(fragment))
+      new Synchronized(wrapped.withPath(fragment), on)
 
     override def progressMonitor: Option[LoggerFn] =
       wrapped.progressMonitor
