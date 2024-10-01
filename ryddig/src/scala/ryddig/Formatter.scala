@@ -6,6 +6,7 @@ import java.io.File
 import java.net.URI
 import java.nio.file.Path
 
+@FunctionalInterface
 trait Formatter[T] {
   def apply(t: T): Str
 }
