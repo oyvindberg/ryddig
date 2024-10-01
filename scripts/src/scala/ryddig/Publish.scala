@@ -13,7 +13,7 @@ import scala.collection.immutable.SortedMap
 
 object Publish extends BleepScript("Publish") {
   def run(started: Started, commands: Commands, args: List[String]): Unit = {
-    commands.compile(started.build.explodedProjects.keys.toList)
+    commands.compile(started.build.explodedProjects.keys.filter(projectsToPublish.include).toList)
 
     val dynVer = new DynVerPlugin(baseDirectory = started.buildPaths.buildDir.toFile, dynverSonatypeSnapshots = true)
     val pgp = new PgpPlugin(
@@ -58,7 +58,7 @@ object Publish extends BleepScript("Publish") {
       packageLibraries(
         started,
         coordinatesFor = CoordinatesFor.Default(groupId = "com.olvind.ryddig", version = dynVer.version),
-        shouldInclude = _ => true,
+        shouldInclude = projectsToPublish.include,
         publishLayout = PublishLayout.Maven(info)
       )
 
