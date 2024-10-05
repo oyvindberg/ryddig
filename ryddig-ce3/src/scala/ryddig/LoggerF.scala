@@ -43,9 +43,9 @@ object LoggerF {
         case (l1: TypedLoggerF[F, t1], None)                          => l1.maybeZipWith(None)
       }
 
-    def synchronized(on: Object): LoggerF[F] =
+    def syncAccess(on: Object): LoggerF[F] =
       l match {
-        case l: TypedLoggerF[F, t] => l.synchronized(on)
+        case l: TypedLoggerF[F, t] => l.syncAccess(on)
       }
   }
 }
@@ -79,6 +79,6 @@ final class TypedLoggerF[F[_]: Sync, +U](override val raw: TypedLogger[U]) exten
   def map[U2](f: U => U2): TypedLoggerF[F, U2] =
     new TypedLoggerF(raw.map(f))
 
-  def synchronized(on: Object): TypedLoggerF[F, U] =
-    new TypedLoggerF(raw.synchronized(on))
+  def syncAccess(on: Object): TypedLoggerF[F, U] =
+    new TypedLoggerF(raw.syncAccess(on))
 }

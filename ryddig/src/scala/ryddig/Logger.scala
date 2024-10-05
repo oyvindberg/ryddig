@@ -45,9 +45,9 @@ object Logger {
         case (l1: TypedLogger[t1], None)                      => l1.maybeZipWith(None)
       }
 
-    def synchronized(on: Object): Logger =
+    def syncAccess(on: Object): Logger =
       l match {
-        case l: TypedLogger[t] => l.synchronized(on)
+        case l: TypedLogger[t] => l.syncAccess(on)
       }
   }
 }
@@ -80,7 +80,7 @@ trait TypedLogger[+Underlying] extends Logger {
   final def map[U2](f: Underlying => U2): TypedLogger[U2] =
     new TypedLogger.Mapped(this, f)
 
-  final def synchronized(on: Object): TypedLogger[Underlying] =
+  final def syncAccess(on: Object): TypedLogger[Underlying] =
     new TypedLogger.Synchronized(this, on)
 }
 
