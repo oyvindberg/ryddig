@@ -201,10 +201,10 @@ object TypedLogger {
     override def underlying: (U1, U2) =
       (one.underlying, two.underlying)
 
-    private val both = one.zipWith(two)
-
-    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
-      both.apply(t, throwable, metadata)
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+      one.apply(t, throwable, metadata)
+      two.apply(t, throwable, metadata)
+    }
 
     override def withContext[T: Formatter](key: String, value: T): Zipped[U1, U2] =
       new Zipped(one.withContext(key, value), two.withContext(key, value))
@@ -224,14 +224,13 @@ object TypedLogger {
     override def underlying: (U1, Option[U2]) =
       (one.underlying, two.map(_.underlying))
 
-    private val both =
+    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+      one.apply(t, throwable, metadata)
       two match {
-        case Some(two) => one.zipWith(two)
-        case None      => one
+        case Some(two) => two.apply(t, throwable, metadata)
+        case None      => ()
       }
-
-    override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit =
-      both.apply(t, throwable, metadata)
+    }
 
     override def withContext[T: Formatter](key: String, value: T): MaybeZipped[U1, U2] =
       new MaybeZipped(one.withContext(key, value), two.map(_.withContext(key, value)))
