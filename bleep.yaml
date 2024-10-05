@@ -10,19 +10,26 @@ projects:
     - io.circe::circe-generic:0.14.10
     - io.circe::circe-parser:0.14.10
     extends: template-cross-all
-  ryddig-slf4j2:
-    dependencies: org.slf4j:slf4j-api:2.0.16
-    dependsOn: ryddig
-    extends: template-cross-all
   ryddig-ce3:
     dependencies: org.typelevel::cats-effect:3.5.4
+    dependsOn: ryddig
+    extends: template-cross-all
+  ryddig-slf4j2:
+    dependencies: org.slf4j:slf4j-api:2.0.16
     dependsOn: ryddig
     extends: template-cross-all
   scripts:
     dependencies: build.bleep::bleep-plugin-ci-release:${BLEEP_VERSION}
     extends:
-      - template-common
-      - template-scala-3
+    - template-common
+    - template-scala-3
+scripts:
+  my-publish-local:
+    main: ryddig.PublishLocal
+    project: scripts
+  publish:
+    main: ryddig.Publish
+    project: scripts
 templates:
   template-common:
     platform:
@@ -49,12 +56,5 @@ templates:
       version: 2.13.15
   template-scala-3:
     scala:
-      options: -source:3.5
-      version: 3.5.1
-scripts:
-  publish:
-    main: ryddig.Publish
-    project: scripts
-  my-publish-local:
-    main: ryddig.PublishLocal
-    project: scripts
+      options: -source:3.3
+      version: 3.3.3
