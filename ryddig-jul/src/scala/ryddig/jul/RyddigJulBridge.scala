@@ -7,7 +7,7 @@ import sourcecode.{Enclosing, File, Line}
 import java.text.MessageFormat
 import java.time.Instant
 import java.util.logging as jul
-import scala.math.Ordering.Implicits.given
+import scala.math.Ordering.Implicits.infixOrderingOps
 import scala.util.Try
 
 object RyddigJulBridge {
@@ -69,13 +69,13 @@ class RyddigJulBridge(logger: Logger) extends jul.Handler {
 
   override def publish(record: jul.LogRecord): Unit =
     // Silently ignore null records.
-    if record == null then ()
+    if (record == null) ()
     else {
       val logLevel = RyddigJulBridge.logLevelFor(record.getLevel)
-      if logger.minLogLevel <= logLevel then {
+      if (logger.minLogLevel <= logLevel) {
         val loggerName = RyddigJulBridge.loggerNameFor(record)
         val i18nMessage = RyddigJulBridge.getMessageI18N(record).getOrElse("<no message>")
-        val metadata = Metadata(Option(record.getInstant).getOrElse(Instant.now), logLevel, Line(-1), File(loggerName), Enclosing("bridge"))
+        val metadata = new Metadata(Option(record.getInstant).getOrElse(Instant.now), logLevel, Line(-1), File(loggerName), Enclosing("bridge"))
         logger(i18nMessage, throwable = None, metadata)
       }
     }
