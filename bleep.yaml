@@ -18,6 +18,9 @@ projects:
     dependencies: org.slf4j:slf4j-api:2.0.16
     dependsOn: ryddig
     extends: template-cross-all
+  ryddig-jul:
+    dependsOn: ryddig
+    extends: template-cross-all
   scripts:
     dependencies: build.bleep::bleep-plugin-ci-release:${BLEEP_VERSION}
     extends:
