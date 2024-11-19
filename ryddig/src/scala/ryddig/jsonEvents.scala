@@ -98,6 +98,8 @@ class jsonEvents(prefix: String) {
 
     override def underlying: U = next.underlying
     override val minLogLevel: LogLevel = next.minLogLevel
+    override def context: Ctx = next.context
+    override def path: List[String] = next.path
   }
 
   case class DeserializedThrowable(th: Th) extends Throwable with NoStackTrace {

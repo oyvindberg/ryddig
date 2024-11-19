@@ -3,6 +3,9 @@ package ryddig
 import cats.effect.Sync
 
 sealed abstract class LoggerF[F[_]: Sync](val raw: Logger) extends LogActionsF[F] {
+  def context: Ctx
+  def path: List[String]
+
   final val minLogLevel: LogLevel =
     raw.minLogLevel
 
@@ -54,6 +57,9 @@ final class TypedLoggerF[F[_]: Sync, +U](override val raw: TypedLogger[U]) exten
   val underlying: U = raw.underlying
 
   override def unit: F[Unit] = Sync[F].unit
+
+  def context: Ctx = raw.context
+  def path: List[String] = raw.path
 
   def withContext[T: Formatter](key: String, value: T): TypedLoggerF[F, U] =
     new TypedLoggerF(raw.withContext(key, value))
