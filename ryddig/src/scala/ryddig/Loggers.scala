@@ -30,8 +30,8 @@ object Loggers {
   // wrap in TypedLoggerResource if you need it flushed/closed
   def writer[A <: Writer](writer: A, flush: Boolean, pattern: Pattern, ctx: Ctx = emptyContext): TypedLogger[A] =
     new TypedLogger.WriterLogger(writer, flush, pattern, ctx, Nil)
-
-  def storing(ctx: Ctx = emptyContext): TypedLogger[Array[TypedLogger.Stored]] =
+  
+  def storing(ctx: Ctx = emptyContext): TypedLogger[Array[Stored]] =
     new TypedLogger.StoringLogger(new TypedLogger.Store, ctx, Nil)
 
   def printJsonStream[U <: Flushable & Appendable](prefix: String, to: U, ctx: Ctx = emptyContext): TypedLogger[U] = {

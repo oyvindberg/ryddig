@@ -38,4 +38,7 @@ trait LogActions extends Any { self: Logger =>
 
   final inline def error[T: Formatter](t: => T, th: Throwable)(using l: Line, f: File, e: Enclosing): Unit =
     doLog(LogLevel.error, t, Some(th), new Metadata(Instant.now, LogLevel.error, l, f, e))
+
+  final inline def stored(stored: Stored): Unit =
+    doLog(stored.metadata.logLevel, stored.message, stored.throwable, stored.metadata)
 }

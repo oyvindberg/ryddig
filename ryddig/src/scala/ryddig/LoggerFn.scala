@@ -42,5 +42,8 @@ object LoggerFn {
 
     def error[T: Formatter](t: => T, th: Throwable)(implicit l: Line, f: File, e: Enclosing): Unit =
       logger(t, Some(th), new Metadata(Instant.now, LogLevel.error, l, f, e))
+    
+    def stored(stored: Stored): Unit =
+      logger(stored.message, stored.throwable, stored.metadata)
   }
 }

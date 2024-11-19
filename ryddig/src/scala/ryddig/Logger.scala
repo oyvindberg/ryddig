@@ -1,7 +1,5 @@
 package ryddig
 
-import fansi.Str
-
 import java.io.{PrintStream, Writer}
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -87,8 +85,6 @@ trait TypedLogger[+Underlying] extends Logger {
 }
 
 object TypedLogger {
-  case class Stored(message: Str, throwable: Option[Throwable], metadata: Metadata, ctx: Ctx, path: List[String])
-
   private[ryddig] class Store() {
     private var reversed: List[Stored] = Nil
 
