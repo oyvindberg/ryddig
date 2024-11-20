@@ -178,8 +178,8 @@ object TypedLogger {
       else
         Some {
           new LoggerFn {
-            override def apply[T: Formatter](text: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
-              val formatted = pattern(text, throwable, metadata, context, path)
+            override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
+              val formatted = pattern(t, throwable, metadata, context, path)
               if (lastWasProgress.get()) {
                 underlying.print(CleanCurrentLine + formatted.render + "\r")
                 ()
@@ -200,8 +200,9 @@ object TypedLogger {
       (one.underlying, two.underlying)
 
     override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
-      one.apply(t, throwable, metadata)
-      two.apply(t, throwable, metadata)
+      lazy val tt = t
+      one.apply(tt, throwable, metadata)
+      two.apply(tt, throwable, metadata)
     }
 
     override def withContext[T: Formatter](key: String, value: T): Zipped[U1, U2] =
@@ -229,9 +230,10 @@ object TypedLogger {
       (one.underlying, two.map(_.underlying))
 
     override def apply[T: Formatter](t: => T, throwable: Option[Throwable], metadata: Metadata): Unit = {
-      one.apply(t, throwable, metadata)
+      lazy val tt = t
+      one.apply(tt, throwable, metadata)
       two match {
-        case Some(two) => two.apply(t, throwable, metadata)
+        case Some(two) => two.apply(tt, throwable, metadata)
         case None      => ()
       }
     }
