@@ -75,7 +75,8 @@ class RyddigJulBridge(logger: Logger) extends jul.Handler {
       if (logger.minLogLevel <= logLevel) {
         val loggerName = RyddigJulBridge.loggerNameFor(record)
         val i18nMessage = RyddigJulBridge.getMessageI18N(record).getOrElse("<no message>")
-        val metadata = new Metadata(Option(record.getInstant).getOrElse(Instant.now), logLevel, Line(-1), File(loggerName), Enclosing("bridge"))
+        val metadata =
+          new Metadata(Option(record.getInstant).getOrElse(Instant.now), logLevel, Line(-1), File(loggerName), Enclosing("bridge"))
         logger(i18nMessage, throwable = None, metadata)
       }
     }
